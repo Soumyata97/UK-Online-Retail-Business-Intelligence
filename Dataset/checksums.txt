@@ -1,0 +1,8 @@
+ffad780b90847360fade0acc68b4e9fcf36c4e2b8638e5391a24e042375a3191  Dataset/raw/online_retail_raw.csv
+afe408b04b250fd965302aefe36a78f08bfa741e25fe75fbc671dde724b3f62d  Dataset/cleaned/09_Cleaned_Online_Retail.csv
+43465a06f2ccf7c8b5bd2892bc7defb52f97487934fe93b16ae4c3936424676d  Online Retail.xlsx
+f5385cbb54bbebf7196389109c6b0621faab0c304e3702548165e71c84aede8b  online_retail.zip
+
+Notes: CSV files use UTF-8 and LF (Unix) line endings. On Windows, check with PowerShell:  Get-FileHash .\Dataset\raw\online_retail_raw.csv  (SHA256 is the default).
+If a tool rewrites the file with CRLF line endings the hash changes, but the data does not.
+The xlsx and zip hashes refer to the official files downloaded on 2026-11-17 from https://archive.ics.uci.edu/static/public/352/online+retail.zip

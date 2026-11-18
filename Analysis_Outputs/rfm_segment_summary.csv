@@ -1,0 +1,8 @@
+rfm_segment,customers,pct_of_customers,net_revenue,pct_of_revenue,avg_recency_days,avg_frequency,avg_monetary
+Champions,1233,28.4,5827227.65,70.5,14,9.3,4726.06
+Loyal Customers,879,20.3,1141123.47,13.8,41,3.4,1298.21
+New Customers,201,4.6,44749.11,0.5,19,1.0,222.63
+Potential Loyalists,291,6.7,66768.39,0.8,48,1.2,229.44
+At Risk,877,20.2,1009693.26,12.2,161,2.8,1151.30
+Hibernating,839,19.4,180075.44,2.2,227,1.1,214.63
+Not Scored (net revenue <= 0),14,0.3,-237.41,0.0,141,1.1,-16.96

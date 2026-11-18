@@ -1,0 +1,246 @@
+// =============================================================================
+// UK Online Retail Sales & Customer Analytics
+// 21_Power_Query_M_Code.txt  -  Power Query (M) code for Power BI Desktop
+//
+// STATUS: Generated but UNTESTED in Power BI Desktop (Power BI is not available
+// in the build environment). The PostgreSQL objects these queries read WERE
+// created and tested on PostgreSQL 16.15. Test every query locally.
+//
+// HOW TO USE (details in PowerBI/Dashboard_Build_Guide.docx and START_HERE.md)
+//   1. Home > Transform data > opens the Power Query Editor.
+//   2. Home > New Source > Blank Query.  Rename the query (right pane, Name)
+//      to EXACTLY the name shown in the "QUERY:" line below.
+//   3. Home > Advanced Editor > delete everything > paste the whole block that
+//      follows its "// QUERY:" line (up to the next "// QUERY:" line) > Done.
+//      Do not paste the "// QUERY:" comment line itself (harmless if you do).
+//   4. Create the two parameters first, then the five model tables.
+//
+// DESIGN NOTE - avoiding duplicated cleaning
+//   All cleaning is done ONCE, in PostgreSQL (07_Data_Cleaning_Script.sql).
+//   The model queries (section B) therefore only: connect, select the table,
+//   rename columns to business names, set data types and add 1-2 helper
+//   columns. Section C is an OPTIONAL learning query that re-creates the
+//   cleaning steps on the raw CSV inside Power Query and validates the counts;
+//   it must NOT be loaded into the model.
+// =============================================================================
+
+
+// =============================================================================
+// SECTION A. PARAMETERS  (Home > Manage Parameters > New Parameter, or paste
+// as Blank Queries - the "meta" record turns the query into a parameter)
+// =============================================================================
+
+// QUERY: PgServer
+"localhost:5432" meta [IsParameterQuery = true, Type = "Text", IsParameterQueryRequired = true]
+
+// QUERY: PgDatabase
+"online_retail_bi" meta [IsParameterQuery = true, Type = "Text", IsParameterQueryRequired = true]
+
+// QUERY: RawCsvPath   (only needed for the optional section C)
+// Change the path to where you extracted the project.
+"C:\Projects\UK-Online-Retail-Business-Intelligence\Dataset\raw\online_retail_raw.csv" meta [IsParameterQuery = true, Type = "Text", IsParameterQueryRequired = false]
+
+
+// =============================================================================
+// SECTION B. MODEL TABLES (load these five)
+// The first time a query runs, Power BI asks for credentials:
+//   Database tab > User name: postgres (or your user) > Password: your password.
+// The password is stored by Power BI on your PC - never in this project.
+// =============================================================================
+
+// QUERY: FactSales
+let
+    Source      = PostgreSQL.Database(PgServer, PgDatabase),
+    Fact        = Source{[Schema = "dw", Item = "fact_sales"]}[Data],
+    Renamed     = Table.RenameColumns(Fact, {
+                      {"source_row_id", "SourceRowID"}, {"invoice_no", "InvoiceNo"},
+                      {"product_key", "ProductKey"}, {"customer_key", "CustomerKey"},
+                      {"country_key", "CountryKey"}, {"invoice_datetime", "InvoiceDateTime"},
+                      {"quantity", "Quantity"}, {"unit_price", "UnitPrice"},
+                      {"line_revenue", "LineRevenue"}, {"transaction_type", "TransactionType"},
+                      {"cancellation_status", "CancellationStatus"}, {"is_product", "IsProduct"},
+                      {"has_customer_id", "HasCustomerID"}}),
+    // The relationship to DimDate uses a real Date column (simplest for time intelligence),
+    // so the integer date_key is not needed in Power BI.
+    RemovedKey  = Table.RemoveColumns(Renamed, {"date_key"}),
+    AddedDate   = Table.AddColumn(RemovedKey, "InvoiceDate", each Date.From([InvoiceDateTime]), type date),
+    // Explicit data types. Fixed decimal (Currency.Type) keeps money exact - no floating-point drift.
+    Typed       = Table.TransformColumnTypes(AddedDate, {
+                      {"SourceRowID", Int64.Type}, {"InvoiceNo", type text},
+                      {"ProductKey", Int64.Type}, {"CustomerKey", Int64.Type}, {"CountryKey", Int64.Type},
+                      {"InvoiceDateTime", type datetime}, {"Quantity", Int64.Type},
+                      {"UnitPrice", Currency.Type}, {"LineRevenue", Currency.Type},
+                      {"TransactionType", type text}, {"CancellationStatus", type text},
+                      {"IsProduct", type logical}, {"HasCustomerID", type logical}})
+in
+    Typed
+
+// QUERY: DimDate
+let
+    Source   = PostgreSQL.Database(PgServer, PgDatabase),
+    DimDate  = Source{[Schema = "dw", Item = "dim_date"]}[Data],
+    Renamed  = Table.RenameColumns(DimDate, {
+                   {"date_key", "DateKey"}, {"full_date", "Date"}, {"day_of_month", "Day"},
+                   {"day_name", "DayName"}, {"day_of_week_iso", "DayOfWeek"}, {"is_weekend", "IsWeekend"},
+                   {"week_start_date", "WeekStart"}, {"iso_week", "ISOWeek"},
+                   {"month_number", "MonthNumber"}, {"month_name", "Month"}, {"month_short", "MonthShort"},
+                   {"quarter_number", "QuarterNumber"}, {"quarter_label", "Quarter"}, {"year_number", "Year"},
+                   {"year_month", "YearMonth"}, {"year_month_key", "YearMonthKey"},
+                   {"is_in_data_range", "IsInDataRange"}}),
+    Typed    = Table.TransformColumnTypes(Renamed, {
+                   {"DateKey", Int64.Type}, {"Date", type date}, {"Day", Int64.Type}, {"DayName", type text},
+                   {"DayOfWeek", Int64.Type}, {"IsWeekend", type logical}, {"WeekStart", type date},
+                   {"ISOWeek", Int64.Type}, {"MonthNumber", Int64.Type}, {"Month", type text},
+                   {"MonthShort", type text}, {"QuarterNumber", Int64.Type}, {"Quarter", type text},
+                   {"Year", Int64.Type}, {"YearMonth", type text}, {"YearMonthKey", Int64.Type},
+                   {"IsInDataRange", type logical}})
+in
+    Typed
+
+// QUERY: DimProduct
+let
+    Source     = PostgreSQL.Database(PgServer, PgDatabase),
+    DimProduct = Source{[Schema = "dw", Item = "dim_product"]}[Data],
+    Renamed    = Table.RenameColumns(DimProduct, {
+                     {"product_key", "ProductKey"}, {"stock_code", "StockCode"},
+                     {"description", "Description"}, {"description_variants", "DescriptionVariants"},
+                     {"item_type", "ItemType"}, {"is_product", "IsProduct"}}),
+    // Text trimming safeguard (data is already trimmed in SQL; this costs nothing and
+    // protects the slicer if the table is ever loaded from another source).
+    Trimmed    = Table.TransformColumns(Renamed, {{"StockCode", Text.Trim, type text}, {"Description", Text.Trim, type text}}),
+    // One searchable label for the Product slicer / search box
+    AddedLabel = Table.AddColumn(Trimmed, "Product", each [StockCode] & " - " & [Description], type text),
+    Typed      = Table.TransformColumnTypes(AddedLabel, {
+                     {"ProductKey", Int64.Type}, {"DescriptionVariants", Int64.Type},
+                     {"ItemType", type text}, {"IsProduct", type logical}})
+in
+    Typed
+
+// QUERY: DimCustomer
+let
+    Source      = PostgreSQL.Database(PgServer, PgDatabase),
+    DimCustomer = Source{[Schema = "dw", Item = "dim_customer"]}[Data],
+    Renamed     = Table.RenameColumns(DimCustomer, {
+                      {"customer_key", "CustomerKey"}, {"customer_id", "CustomerID"},
+                      {"customer_label", "Customer"}, {"primary_country", "PrimaryCountry"},
+                      {"is_known_customer", "IsKnownCustomer"}, {"rfm_segment", "CustomerSegment"},
+                      {"r_score", "RScore"}, {"f_score", "FScore"}, {"m_score", "MScore"}}),
+    // Null handling: the Unknown member (key 0) has no CustomerID - keep it NULL (never invent an ID),
+    // but make sure the segment text is never blank so slicers show a readable label.
+    FixedSeg    = Table.ReplaceValue(Renamed, null, "No purchases in period", Replacer.ReplaceValue, {"CustomerSegment"}),
+    // Sort order for the segment axis (Column tools > Sort by column > SegmentOrder)
+    AddedOrder  = Table.AddColumn(FixedSeg, "SegmentOrder", each
+                      if [CustomerSegment] = "Champions" then 1
+                      else if [CustomerSegment] = "Loyal Customers" then 2
+                      else if [CustomerSegment] = "New Customers" then 3
+                      else if [CustomerSegment] = "Potential Loyalists" then 4
+                      else if [CustomerSegment] = "At Risk" then 5
+                      else if [CustomerSegment] = "Hibernating" then 6
+                      else if Text.StartsWith([CustomerSegment], "Not Scored") then 7
+                      else if [CustomerSegment] = "No purchases in period" then 8
+                      else 9, Int64.Type),
+    Typed       = Table.TransformColumnTypes(AddedOrder, {
+                      {"CustomerKey", Int64.Type}, {"CustomerID", Int64.Type}, {"Customer", type text},
+                      {"PrimaryCountry", type text}, {"IsKnownCustomer", type logical},
+                      {"CustomerSegment", type text}, {"RScore", Int64.Type}, {"FScore", Int64.Type},
+                      {"MScore", Int64.Type}})
+in
+    Typed
+
+// QUERY: DimCountry
+let
+    Source     = PostgreSQL.Database(PgServer, PgDatabase),
+    DimCountry = Source{[Schema = "dw", Item = "dim_country"]}[Data],
+    Renamed    = Table.RenameColumns(DimCountry, {
+                     {"country_key", "CountryKey"}, {"country_name", "Country"},
+                     {"map_country_name", "MapCountry"}, {"market", "Market"}, {"is_mappable", "IsMappable"}}),
+    Typed      = Table.TransformColumnTypes(Renamed, {
+                     {"CountryKey", Int64.Type}, {"Country", type text}, {"MapCountry", type text},
+                     {"Market", type text}, {"IsMappable", type logical}})
+in
+    Typed
+
+
+// =============================================================================
+// SECTION C. OPTIONAL LEARNING QUERIES  -  cleaning re-created in Power Query
+// Right-click each query > untick "Enable load" so it is NOT loaded into the model.
+// They demonstrate: data type correction, date conversion, text trimming, null
+// handling, duplicate assessment, cancellation classification, revenue
+// calculation and data validation. Expected results come from the SQL run.
+// =============================================================================
+
+// QUERY: PQ_Raw   (raw CSV exactly as shipped)
+let
+    Source   = Csv.Document(File.Contents(RawCsvPath),
+                   [Delimiter = ",", Columns = 9, Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+    Promoted = Table.PromoteHeaders(Source, [PromoteAllScalars = true])
+in
+    Promoted
+
+// QUERY: PQ_CleaningDemo
+let
+    Raw          = PQ_Raw,
+    // 1. Duplicate assessment - exact duplicates across the 8 ORIGINAL columns, compared
+    //    BEFORE trimming (same rule as SQL R5). Buffer after sorting so the first
+    //    occurrence (lowest source_row_id) is the one kept.
+    Sorted       = Table.Buffer(Table.Sort(
+                       Table.TransformColumnTypes(Raw, {{"source_row_id", Int64.Type}}),
+                       {{"source_row_id", Order.Ascending}})),
+    Deduplicated = Table.Distinct(Sorted, {"InvoiceNo", "StockCode", "Description", "Quantity",
+                                           "InvoiceDate", "UnitPrice", "CustomerID", "Country"}),
+    // 2. Text trimming (+ upper-case stock code, rule R4)
+    Trimmed      = Table.TransformColumns(Deduplicated, {
+                       {"InvoiceNo", Text.Trim, type text},
+                       {"StockCode", each Text.Upper(Text.Trim(_)), type text},
+                       {"Description", Text.Trim, type text},
+                       {"Country", Text.Trim, type text}}),
+    // 3. Null handling - empty text becomes null (CustomerID and Description are the only gaps)
+    Nulls        = Table.ReplaceValue(Trimmed, "", null, Replacer.ReplaceValue, {"Description", "CustomerID"}),
+    // 4. Data type correction and date conversion. The CSV uses ISO dates and "." decimals,
+    //    so parse with a fixed culture ("en-US") - this works whatever your Windows region is.
+    Typed        = Table.TransformColumnTypes(Nulls, {
+                       {"Quantity", Int64.Type}, {"InvoiceDate", type datetime},
+                       {"UnitPrice", Currency.Type}, {"CustomerID", Int64.Type}}, "en-US"),
+    AddedDate    = Table.AddColumn(Typed, "InvoiceDateOnly", each Date.From([InvoiceDate]), type date),
+    // 5. Cancellation classification (same order of rules as SQL R8)
+    ServiceCodes = {"POST", "DOT", "C2", "M", "D", "S", "BANK CHARGES", "AMAZONFEE", "CRUK", "B"},
+    AddedProduct = Table.AddColumn(AddedDate, "IsProduct", each
+                       not (List.Contains(ServiceCodes, [StockCode]) or Text.StartsWith([StockCode], "GIFT_0001_")),
+                       type logical),
+    AddedType    = Table.AddColumn(AddedProduct, "TransactionType", each
+                       if Text.StartsWith([InvoiceNo], "C") then "Cancellation"
+                       else if Text.StartsWith([InvoiceNo], "A") then "Adjustment"
+                       else if not [IsProduct] then "Non-Product"
+                       else if [Quantity] <= 0 then "Stock Adjustment"
+                       else if [UnitPrice] = 0 then "Zero Price"
+                       else "Sale", type text),
+    AddedStatus  = Table.AddColumn(AddedType, "CancellationStatus", each
+                       if Text.StartsWith([InvoiceNo], "C") then "Cancelled" else "Not Cancelled", type text),
+    // 6. Revenue calculation
+    AddedRevenue = Table.AddColumn(AddedStatus, "LineRevenue", each [Quantity] * [UnitPrice], Currency.Type)
+in
+    AddedRevenue
+
+// QUERY: PQ_Validation   (compare Power Query results with the SQL results)
+let
+    RawRows      = Table.RowCount(PQ_Raw),
+    CleanRows    = Table.RowCount(PQ_CleaningDemo),
+    Grouped      = Table.Group(PQ_CleaningDemo, {"TransactionType"}, {
+                       {"Lines", each Table.RowCount(_), Int64.Type},
+                       {"Value", each List.Sum([LineRevenue]), Currency.Type}}),
+    Checks       = Table.FromRecords({
+                       [Check = "Raw rows",                 Expected = 541909, Actual = RawRows],
+                       [Check = "Exact duplicates removed", Expected = 5268,   Actual = RawRows - CleanRows],
+                       [Check = "Clean rows",               Expected = 536641, Actual = CleanRows],
+                       [Check = "Sale lines",               Expected = 522540, Actual = Grouped{[TransactionType = "Sale"]}[Lines]],
+                       [Check = "Cancellation lines",       Expected = 9251,   Actual = Grouped{[TransactionType = "Cancellation"]}[Lines]],
+                       [Check = "Non-Product lines",        Expected = 2354,   Actual = Grouped{[TransactionType = "Non-Product"]}[Lines]],
+                       [Check = "Stock Adjustment lines",   Expected = 1336,   Actual = Grouped{[TransactionType = "Stock Adjustment"]}[Lines]],
+                       [Check = "Zero Price lines",         Expected = 1157,   Actual = Grouped{[TransactionType = "Zero Price"]}[Lines]],
+                       [Check = "Adjustment lines",         Expected = 3,      Actual = Grouped{[TransactionType = "Adjustment"]}[Lines]],
+                       [Check = "Total Revenue (Sale) x100", Expected = 1024721932,
+                                Actual = Number.Round(Grouped{[TransactionType = "Sale"]}[Value] * 100, 0)]
+                   }),
+    WithStatus   = Table.AddColumn(Checks, "Status", each if [Expected] = [Actual] then "PASS" else "FAIL", type text)
+in
+    WithStatus

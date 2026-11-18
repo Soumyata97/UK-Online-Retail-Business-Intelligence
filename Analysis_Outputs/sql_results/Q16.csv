@@ -1,0 +1,11 @@
+customer_rank,customer_id,primary_country,orders,net_revenue,share_of_identified_revenue_pct
+1,14646,Netherlands,72,278778.02,3.37
+2,18102,United Kingdom,60,259657.30,3.14
+3,17450,United Kingdom,46,189575.53,2.29
+4,14911,EIRE,198,128768.24,1.56
+5,12415,Australia,20,123638.18,1.50
+6,14156,EIRE,54,113685.77,1.38
+7,17511,United Kingdom,31,88138.20,1.07
+8,16684,United Kingdom,28,65920.12,0.80
+9,13694,United Kingdom,50,62961.54,0.76
+10,16029,United Kingdom,62,60369.93,0.73

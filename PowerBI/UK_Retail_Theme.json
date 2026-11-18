@@ -1,0 +1,13 @@
+{
+  "name": "UK Online Retail BI",
+  "dataColors": ["#2A78D6", "#0D366B", "#EB6834", "#1BAF7A", "#EDA100", "#E87BA4", "#6250D6", "#E34948"],
+  "background": "#FFFFFF",
+  "foreground": "#0B0B0B",
+  "tableAccent": "#0D366B",
+  "good": "#0CA30C",
+  "neutral": "#EDA100",
+  "bad": "#D03B3B",
+  "maximum": "#0D366B",
+  "center": "#86B6EF",
+  "minimum": "#CDE2FB"
+}

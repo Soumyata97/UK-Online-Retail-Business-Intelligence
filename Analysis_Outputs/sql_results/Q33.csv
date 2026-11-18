@@ -1,0 +1,8 @@
+transaction_type,is_product,lines,invoices,total_value,in_total_revenue,in_net_revenue
+Adjustment,f,3,3,-11062.06,No,No
+Cancellation,t,8668,3422,-475901.16,No,Yes
+Cancellation,f,583,477,-418078.57,No,No
+Non-Product,f,2354,2289,383829.42,No,No
+Sale,t,522540,19773,10247219.32,Yes,Yes
+Stock Adjustment,t,1336,1336,0.00,No,No
+Zero Price,t,1157,804,0.00,No,No

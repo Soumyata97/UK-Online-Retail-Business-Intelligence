@@ -1,0 +1,6 @@
+frequency_band,customers,pct_of_customers,total_revenue,pct_of_revenue
+1 order,1505,34.7,626605.90,7.2
+2 orders,831,19.2,720890.58,8.3
+3-5 orders,1133,26.1,1613084.86,18.5
+6-10 orders,533,12.3,1486394.19,17.0
+11+ orders,332,7.7,4290252.11,49.1

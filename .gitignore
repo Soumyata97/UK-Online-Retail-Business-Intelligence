@@ -1,0 +1,35 @@
+# --- Large data files -------------------------------------------------------
+# The raw and cleaned CSVs (51 MB and 72 MB) are in the ZIP for convenience but
+# should not be pushed to GitHub (GitHub warns above 50 MB and rejects files
+# above 100 MB). Anyone can rebuild them: see Dataset/download_instructions.md.
+Dataset/raw/*.csv
+Dataset/cleaned/*.csv
+*.xlsx.tmp
+Online Retail.xlsx
+online_retail.zip
+
+# --- Credentials and local settings ----------------------------------------
+.env
+*.pgpass
+pgpass.conf
+.vscode/settings.json
+
+# --- Python ------------------------------------------------------------------
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# --- Office / OS temp files ---------------------------------------------------
+~$*
+*.tmp
+Thumbs.db
+.DS_Store
+
+# Power BI temporary files
+*.pbix.autorecover
+*.pbit.autorecover
+
+# Local database backups
+*.backup
+*.dump

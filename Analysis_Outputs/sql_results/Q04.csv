@@ -1,0 +1,6 @@
+year_number,quarter_label,months_with_data,total_revenue,orders,is_complete_quarter
+2010,Q4,1,775638.36,1550,No - partial quarter
+2011,Q1,3,1868013.62,3614,Yes
+2011,Q2,3,1992889.97,4428,Yes
+2011,Q3,3,2440756.22,4609,Yes
+2011,Q4,3,3169921.15,5572,No - partial quarter

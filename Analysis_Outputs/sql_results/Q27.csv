@@ -1,0 +1,11 @@
+country_name,orders,cancellation_invoices,cancellation_rate_pct,product_cancellation_value
+Switzerland,50,20,28.6,-582.55
+Germany,443,146,24.8,-4761.49
+Portugal,50,13,20.6,-143.64
+EIRE,282,72,20.3,-11470.84
+Australia,56,12,17.6,-1181.31
+Belgium,98,21,17.6,-264.38
+United Kingdom,17901,3372,15.9,-443053.31
+France,382,69,15.3,-2416.40
+Spain,88,15,14.6,-3959.91
+Netherlands,93,6,6.1,-409.80
